@@ -14,6 +14,8 @@ This is a runnable disaster-response MVP: **one agent orchestrating seven tools*
 - `search_missing_reports`：只搜索合成签到记录。
 - `send_notification`：模拟通知，不向任何外部服务发送信息。
 - 时间线、一键预设、地图、路线、数据来源和 Agent Steps 面板。
+- 可选 openrouteservice 实际道路路线；自动避开当前封路缓冲区，失败时回退到离线候选走廊。
+- 可选 Mapbox Temporary Geocoding 地址搜索；后端代理、500ms 前端防抖、最小输入长度和内存缓存控制调用量。
 - SREC、WFIGS、FEMA、WSDOT 的真实 API 适配器接口；MVP 默认不依赖网络。
 - NVIDIA NIM OpenAI-compatible 客户端接口；默认使用确定性编排，不需要密钥。
 - 40 条合成评测场景、硬性安全门槛、100 分质量评分和浏览器评测面板。
@@ -84,6 +86,16 @@ cd /Users/danny/Documents/救灾
 - `fetch_wsdot_closures`
 
 NIM 配置见 `.env.example`。`backend/app/llm.py` 已实现 OpenAI-compatible `/chat/completions` 客户端，但没有接管安全规则；之后接入模型时，应只用于意图理解和解释生成，空间与撤离安全判断继续由确定性代码负责。
+
+真实路线可通过本地 `.env` 开启（密钥不要提交到 GitHub）：
+
+```env
+ROUTING_PROVIDER=openrouteservice
+ORS_API_KEY=your-local-key
+MAPBOX_ACCESS_TOKEN=your-public-token
+```
+
+系统会向 ORS 请求实际道路折线、距离和预计时间，并把演示中的当前封路转换为避让多边形。外部服务失败时会明确标记并回退，不会把失败解释为道路安全。
 
 ## 合成评测集 / Synthetic evaluation suite
 

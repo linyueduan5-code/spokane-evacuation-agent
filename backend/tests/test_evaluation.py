@@ -2,6 +2,7 @@ import os
 from copy import deepcopy
 
 os.environ["AGENT_PROVIDER"] = "deterministic"
+os.environ["ROUTING_PROVIDER"] = "replay"
 
 from fastapi.testclient import TestClient
 

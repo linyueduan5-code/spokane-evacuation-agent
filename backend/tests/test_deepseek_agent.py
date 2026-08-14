@@ -64,3 +64,20 @@ def test_model_failure_uses_safe_deterministic_completion(monkeypatch):
     assert result.orchestration["guard_tool_calls"] == 5
     assert result.map_state["evacuation"]["level"] == 3
 
+
+def test_model_flow_handles_location_outside_evacuation_polygon(monkeypatch):
+    agent = DeepSeekEvacuationAgent()
+    agent.api_key = "test-only"
+    request = payload()
+    request.context.address = "334 W Spokane Falls Blvd, Spokane, WA"
+    request.context.lat = 47.660899
+    request.context.lon = -117.412441
+    responses = iter([
+        completion_with_tools("get_evacuation_status"),
+        {"choices": [{"message": {"role": "assistant", "content": "done"}}]},
+    ])
+    monkeypatch.setattr(agent, "_completion", lambda messages, tools=None: next(responses))
+    result = agent.chat(request)
+    assert result.map_state["evacuation"]["level"] is None
+    assert result.map_state["evacuation"]["provenance"] is None
+    assert result.severity == "warning"

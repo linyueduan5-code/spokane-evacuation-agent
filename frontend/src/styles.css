@@ -44,6 +44,11 @@ button { cursor: pointer; }
 .control-block > label { display: flex; align-items: center; gap: 7px; margin-bottom: 11px; color: #9db2ac; }
 .control-block input:not([type="range"]) { width: 100%; background: #081416; border: 1px solid var(--line); color: #edf6f2; padding: 11px 12px; border-radius: 3px; font-size: 12px; }
 .coordinates { font: 400 9px 'DM Mono'; color: #617a73; margin-top: 7px; }
+.coordinates.unresolved { color: var(--gold); }
+.location-search { position: relative; }
+.location-results { position: absolute; z-index: 1200; top: calc(100% + 4px); left: 0; right: 0; display: grid; background: #0b181b; border: 1px solid rgba(38,217,199,.35); box-shadow: 0 12px 35px rgba(0,0,0,.5); }
+.location-results button { padding: 10px 11px; color: #cfe0db; background: transparent; border: 0; border-bottom: 1px solid var(--line); text-align: left; font-size: 10px; line-height: 1.4; }
+.location-results button:hover, .location-results button:focus { color: white; background: rgba(38,217,199,.1); }
 .timeline-value { font-weight: 650; font-size: 17px; margin-bottom: 9px; }
 .timeline { width: 100%; accent-color: var(--ember); }
 .timeline-ticks { display: flex; justify-content: space-between; }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Accessibility, AlertTriangle, ArrowUp, BarChart3, CheckCircle2, Clock3, Database, Flame, LocateFixed, PawPrint, Route, ShieldCheck, UserRoundSearch } from 'lucide-react'
 import { api } from './api'
 import EvalPanel from './EvalPanel'
@@ -37,6 +37,11 @@ export default function App() {
     needs: { pets: true, mobility: true, medical: false, service_animal: false },
     contact: 'demo@example.invalid', consent_to_search: false,
   })
+  const [addressQuery, setAddressQuery] = useState('Rifle Club Road, Spokane, WA')
+  const [locationResolved, setLocationResolved] = useState(true)
+  const [suggestions, setSuggestions] = useState([])
+  const [geocodeStatus, setGeocodeStatus] = useState('')
+  const skipGeocode = useRef(false)
   const [response, setResponse] = useState(null)
   const [message, setMessage] = useState('Analyze my situation and find a safe shelter.')
   const [busy, setBusy] = useState(false)
@@ -52,6 +57,38 @@ export default function App() {
       .then(([data, healthData]) => { setBootstrap(data); setHealth(healthData); setStatus('ready') })
       .catch(() => setStatus('offline'))
   }, [])
+
+  useEffect(() => {
+    if (skipGeocode.current) {
+      skipGeocode.current = false
+      return undefined
+    }
+    const query = addressQuery.trim()
+    if (query.length < 3 || locationResolved) {
+      setSuggestions([])
+      return undefined
+    }
+    setGeocodeStatus('searching')
+    const timer = window.setTimeout(() => {
+      api.geocode(query)
+        .then((data) => {
+          setSuggestions(data.results || [])
+          setGeocodeStatus(data.results?.length ? '' : 'No matching address found')
+        })
+        .catch(() => { setSuggestions([]); setGeocodeStatus('Address search unavailable') })
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [addressQuery, locationResolved])
+
+  const chooseLocation = (place) => {
+    skipGeocode.current = true
+    setAddressQuery(place.label)
+    setContext((old) => ({ ...old, address: place.label, lat: place.lat, lon: place.lon }))
+    setLocationResolved(true)
+    setSuggestions([])
+    setGeocodeStatus('')
+    setResponse(null)
+  }
 
   const updateTimeline = (index) => {
     const next = Number(index)
@@ -105,8 +142,26 @@ export default function App() {
 
           <div className="control-block">
             <label><LocateFixed size={15} /> LOCATION</label>
-            <input value={context.address} onChange={(e) => setContext({ ...context, address: e.target.value })} />
-            <div className="coordinates">47.7530° N · 117.5120° W</div>
+            <div className="location-search">
+              <input
+                value={addressQuery}
+                onChange={(e) => {
+                  setAddressQuery(e.target.value)
+                  setContext({ ...context, address: e.target.value })
+                  setLocationResolved(false)
+                }}
+                placeholder="Search a US address"
+                autoComplete="off"
+              />
+              {suggestions.length > 0 && <div className="location-results">
+                {suggestions.map((place) => <button key={place.id} onClick={() => chooseLocation(place)}>{place.label}</button>)}
+              </div>}
+            </div>
+            <div className={`coordinates ${locationResolved ? '' : 'unresolved'}`}>
+              {locationResolved
+                ? `${context.lat.toFixed(4)}° N · ${Math.abs(context.lon).toFixed(4)}° W · MAPBOX`
+                : geocodeStatus === 'searching' ? 'SEARCHING…' : geocodeStatus || 'SELECT AN ADDRESS RESULT'}
+            </div>
           </div>
 
           <div className="control-block">
@@ -134,7 +189,7 @@ export default function App() {
             </div>
           </div>
 
-          <button className="primary-action" disabled={busy || status !== 'ready'} onClick={runAnalysis}>
+          <button className="primary-action" disabled={busy || status !== 'ready' || !locationResolved} onClick={runAnalysis}>
             {busy ? 'AGENT WORKING…' : <><Route size={18} /> RUN EVACUATION PLAN</>}
           </button>
           <button className="secondary-action" onClick={() => setMissingOpen(!missingOpen)}><UserRoundSearch size={17} /> Synthetic reunification demo</button>

@@ -1,6 +1,7 @@
 import os
 
 os.environ["AGENT_PROVIDER"] = "deterministic"
+os.environ["ROUTING_PROVIDER"] = "replay"
 
 from fastapi.testclient import TestClient
 
@@ -95,3 +96,18 @@ def test_downgrade_does_not_imply_hazmat_clearance():
     hazmat = next(step for step in body["steps"] if step["tool"] == "check_hazmat_clearance")
     assert hazmat["output"]["cleared"] is False
     assert "不会建议返家" in body["answer"]
+
+
+def test_location_outside_evacuation_polygon_returns_safe_unknown_instead_of_500():
+    payload = demo_payload()
+    payload["context"].update({
+        "address": "334 W Spokane Falls Blvd, Spokane, WA",
+        "lat": 47.660899,
+        "lon": -117.412441,
+    })
+    body = client.post("/api/chat", json=payload)
+    assert body.status_code == 200
+    result = body.json()
+    assert result["map_state"]["evacuation"]["level"] is None
+    assert result["map_state"]["evacuation"]["provenance"] is None
+    assert "不代表安全" in result["answer"]

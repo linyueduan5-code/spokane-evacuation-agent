@@ -3,14 +3,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agent import EvacuationAgent
 from .dataset import EVACUATION_SNAPSHOTS, INCIDENT_SNAPSHOTS, ROAD_CLOSURES, SHELTERS, SOURCE_REGISTRY
 from .deepseek_agent import DeepSeekEvacuationAgent
 from .evaluation import load_dataset, run_evaluation, score_decision
+from .geocoding import MapboxGeocoder
 from .models import ChatRequest, ChatResponse, EvaluationDecisionRequest, MissingPersonRequest
 
 
@@ -30,6 +32,7 @@ app.add_middleware(
 )
 provider = os.getenv("AGENT_PROVIDER", "deterministic").lower()
 agent = DeepSeekEvacuationAgent() if provider == "deepseek" else EvacuationAgent()
+geocoder = MapboxGeocoder()
 
 
 @app.get("/api/health")
@@ -42,7 +45,20 @@ def health() -> dict:
         "provider": "deepseek" if isinstance(agent, DeepSeekEvacuationAgent) else "deterministic",
         "model": getattr(agent, "model", None),
         "model_configured": getattr(agent, "enabled", False),
+        "routing_provider": agent.tools.router.provider,
+        "routing_configured": agent.tools.router.enabled,
+        "geocoding_provider": "mapbox" if geocoder.enabled else "disabled",
     }
+
+
+@app.get("/api/geocode")
+def geocode(q: str = Query(min_length=3, max_length=120)) -> dict:
+    if not geocoder.enabled:
+        raise HTTPException(status_code=503, detail="Address search is not configured")
+    try:
+        return {"results": list(geocoder.search(q))}
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Address search is temporarily unavailable") from exc
 
 
 @app.get("/api/bootstrap")

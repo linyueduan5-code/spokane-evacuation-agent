@@ -15,6 +15,7 @@ async function request(path, options = {}) {
 export const api = {
   bootstrap: () => request('/api/bootstrap'),
   health: () => request('/api/health'),
+  geocode: (query) => request(`/api/geocode?q=${encodeURIComponent(query)}`),
   chat: (payload) => request('/api/chat', { method: 'POST', body: JSON.stringify(payload) }),
   missingPerson: (payload) => request('/api/missing-person', { method: 'POST', body: JSON.stringify(payload) }),
   runEvaluation: () => request('/api/evaluation/run', { method: 'POST' }),

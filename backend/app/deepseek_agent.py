@@ -286,7 +286,7 @@ class DeepSeekEvacuationAgent(EvacuationAgent):
             notices.insert(0, f"DeepSeek call failed ({model_error}); deterministic safety fallback completed the plan.")
         if evac.get("conflicts"):
             notices.append("Conflicting evacuation records were detected; the official, more conservative level was selected.")
-        if evac.get("provenance", {}).get("stale"):
+        if (evac.get("provenance") or {}).get("stale"):
             notices.append("Evacuation data is stale. The agent will not infer an all-clear.")
         selected_shelter = shelters[0] if isinstance(shelters, list) and shelters else None
         return ChatResponse(
@@ -313,4 +313,3 @@ class DeepSeekEvacuationAgent(EvacuationAgent):
                 "model_error": model_error,
             },
         )
-

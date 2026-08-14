@@ -16,6 +16,7 @@ from .dataset import (
     initial_store,
 )
 from .models import Needs
+from .routing import OpenRouteServiceRouter
 from .utils import active_at, haversine_km, line_near_point, parse_time, point_in_polygon
 
 
@@ -26,9 +27,10 @@ class AgentTools:
     adapters later. Personal data is intentionally synthetic and held in memory.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, router: OpenRouteServiceRouter | None = None) -> None:
         self._sessions: dict[str, dict] = {}
         self._lock = threading.Lock()
+        self.router = router or OpenRouteServiceRouter()
 
     def _store(self, session_id: str) -> dict:
         with self._lock:
@@ -140,13 +142,22 @@ class AgentTools:
             straight = haversine_km(lat, lon, shelter["lat"], shelter["lon"])
             # The MVP returns a demonstrable safe-route corridor, not turn-by-turn navigation.
             detour_factor = 1.45 if blocking else 1.18
-            results.append({
+            route_data = None
+            route_error = None
+            try:
+                route_data = self.router.route(
+                    (lat, lon), (shelter["lat"], shelter["lon"]), closures,
+                )
+            except Exception as exc:
+                route_error = type(exc).__name__
+            result = {
                 "shelter_id": shelter["shelter_id"],
                 "name": shelter["name"],
                 "address": shelter["address"],
                 "lat": shelter["lat"],
                 "lon": shelter["lon"],
                 "distance_km": round(straight * detour_factor, 1),
+                "duration_minutes": None,
                 "capacity_status": shelter["capacity_status"],
                 "accepts": shelter["accepts"],
                 "unmet_needs": [],
@@ -157,9 +168,19 @@ class AgentTools:
                 ),
                 "closures_avoided": [item["name"] for item in blocking],
                 "route": [[lon, lat], [shelter["lon"], shelter["lat"]]],
+                "routing_provider": "replay_fallback",
+                "live_route": False,
                 "provenance": self._provenance(shelter, at),
                 "capabilities_are_synthetic": True,
-            })
+            }
+            if route_data:
+                result.update(route_data)
+                result["route_warning"] = (
+                    "Live ORS candidate route generated while avoiding active closure buffers; verify official road status before departure."
+                )
+            elif route_error:
+                result["route_fallback_reason"] = route_error
+            results.append(result)
         return sorted(results, key=lambda item: (item["route_status"] != "candidate_clear", item["distance_km"]))
 
     def check_hazmat_clearance(self, address: str, zone_name: str | None, at: str) -> dict[str, Any]:

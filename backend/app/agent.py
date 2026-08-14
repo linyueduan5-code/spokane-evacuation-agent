@@ -67,7 +67,7 @@ class EvacuationAgent:
         ]
         if evac.get("conflicts"):
             notices.append("Conflicting evacuation records were detected; the official, more conservative level was selected.")
-        if evac.get("provenance", {}).get("stale"):
+        if (evac.get("provenance") or {}).get("stale"):
             notices.append("Evacuation data is stale. The agent will not infer an all-clear.")
 
         notification_step = None
@@ -125,9 +125,14 @@ class EvacuationAgent:
             )
         if shelter:
             requirements = "、".join(need_labels) if need_labels else "一般需求"
+            travel_time = (
+                f"、预计 {shelter['duration_minutes']} 分钟"
+                if shelter.get("duration_minutes") is not None else ""
+            )
+            route_source = "ORS 实际道路候选路线" if shelter.get("live_route") else "离线候选走廊"
             details.append(
-                f"首选避难所：{shelter['name']}（约 {shelter['distance_km']} km），满足 {requirements}；"
-                f"路线状态：{shelter['route_status']}。出发前请通过官方渠道再次确认。"
+                f"首选避难所：{shelter['name']}（约 {shelter['distance_km']} km{travel_time}），满足 {requirements}；"
+                f"路线状态：{shelter['route_status']}，来源：{route_source}。出发前请通过官方渠道再次确认。"
             )
         else:
             details.append("没有找到满足全部硬性需求且状态开放的避难所，请联系 911/当地应急部门人工协调。")

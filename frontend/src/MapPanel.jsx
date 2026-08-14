@@ -60,7 +60,7 @@ export default function MapPanel({ bootstrap, response, context }) {
         {selected?.route && (
           <Polyline
             positions={selected.route.map(([lon, lat]) => [lat, lon])}
-            pathOptions={{ color: '#26d9c7', weight: 4, dashArray: '8 7' }}
+            pathOptions={{ color: '#26d9c7', weight: 4, dashArray: selected.live_route ? undefined : '8 7' }}
           />
         )}
       </MapContainer>
@@ -69,8 +69,7 @@ export default function MapPanel({ bootstrap, response, context }) {
         <span><i className="dot fire-dot" />Fire / evacuation</span>
         <span><i className="dot shelter-dot" />Shelter</span>
       </div>
-      <div className="replay-pill">REPLAY · NOT LIVE</div>
+      <div className="replay-pill">{selected?.live_route ? 'REPLAY DATA · LIVE ORS ROUTE' : 'REPLAY · OFFLINE ROUTE'}</div>
     </div>
   )
 }
-
