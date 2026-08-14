@@ -106,38 +106,43 @@ class EvacuationAgent:
         shelter = shelters[0] if shelters else None
         need_labels = [label for label, enabled in needs.items() if enabled]
         if level == 3:
-            opening = "Level 3（GO）：立即撤离。不要等待进一步通知。"
+            opening = "Level 3 (GO): Evacuate immediately. Do not wait for another notification."
             severity = "danger"
         elif level == 2:
-            opening = "Level 2（SET）：保持随时撤离状态，不要把降级理解为可以返家。"
+            opening = "Level 2 (SET): Be ready to leave at a moment's notice. A downgrade does not mean it is safe to return."
             severity = "warning"
         elif level == 1:
-            opening = "Level 1（READY）：保持警觉并准备撤离；当前记录不是明确的 All Clear。"
+            opening = "Level 1 (READY): Stay alert and prepare to evacuate. The current record is not an explicit all-clear."
             severity = "warning"
         else:
-            opening = "没有匹配到有效撤离多边形；这不代表安全或已经解除警报。"
+            opening = "No active evacuation polygon matched this location. This does not mean the area is safe or all-clear."
             severity = "warning"
 
         details = []
         if closest:
             details.append(
-                f"最近事件为 {closest['name']}，约 {closest['distance_km']} km；展示数据带有独立观测时间。"
+                f"The nearest incident is {closest['name']}, approximately {closest['distance_km']} km away. "
+                "The displayed incident data carries its own observation timestamp."
             )
         if shelter:
-            requirements = "、".join(need_labels) if need_labels else "一般需求"
+            requirements = ", ".join(need_labels) if need_labels else "general household needs"
             travel_time = (
-                f"、预计 {shelter['duration_minutes']} 分钟"
+                f", about {shelter['duration_minutes']} minutes"
                 if shelter.get("duration_minutes") is not None else ""
             )
-            route_source = "ORS 实际道路候选路线" if shelter.get("live_route") else "离线候选走廊"
+            route_source = "live ORS road-route candidate" if shelter.get("live_route") else "offline candidate corridor"
             details.append(
-                f"首选避难所：{shelter['name']}（约 {shelter['distance_km']} km{travel_time}），满足 {requirements}；"
-                f"路线状态：{shelter['route_status']}，来源：{route_source}。出发前请通过官方渠道再次确认。"
+                f"Preferred shelter: {shelter['name']} (approximately {shelter['distance_km']} km{travel_time}). "
+                f"It satisfies {requirements}. Route status: {shelter['route_status']}; source: {route_source}. "
+                "Confirm the route and shelter through official channels before departure."
             )
         else:
-            details.append("没有找到满足全部硬性需求且状态开放的避难所，请联系 911/当地应急部门人工协调。")
+            details.append(
+                "No open shelter satisfying every required need was found. "
+                "Contact 911 or the local emergency authority for human coordination."
+            )
         if not hazmat.get("cleared", False):
-            details.append("危险品/返家状态没有明确放行，因此系统不会建议返家。")
+            details.append("There is no explicit hazmat or re-entry clearance, so the system will not recommend returning home.")
         return "\n\n".join([opening, *details]), severity
 
     def missing_person(self, request: MissingPersonRequest) -> ChatResponse:

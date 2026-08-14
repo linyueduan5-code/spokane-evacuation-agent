@@ -95,7 +95,7 @@ def test_downgrade_does_not_imply_hazmat_clearance():
     assert body["map_state"]["evacuation"]["level"] == 2
     hazmat = next(step for step in body["steps"] if step["tool"] == "check_hazmat_clearance")
     assert hazmat["output"]["cleared"] is False
-    assert "不会建议返家" in body["answer"]
+    assert "will not recommend returning home" in body["answer"]
 
 
 def test_location_outside_evacuation_polygon_returns_safe_unknown_instead_of_500():
@@ -110,4 +110,4 @@ def test_location_outside_evacuation_polygon_returns_safe_unknown_instead_of_500
     result = body.json()
     assert result["map_state"]["evacuation"]["level"] is None
     assert result["map_state"]["evacuation"]["provenance"] is None
-    assert "不代表安全" in result["answer"]
+    assert "does not mean the area is safe" in result["answer"]
